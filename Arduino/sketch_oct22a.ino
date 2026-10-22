@@ -3,9 +3,9 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-const char* ssid     = "HGW-81449D";
-const char* password = "inilani12321";
-const String serverIP   = "192.168.1.2";  // IPv4 komputer (cek dengan ipconfig)
+const char* ssid     = "isi nama wifi";
+const char* password = "isi password wifi";
+const String serverIP   = "isi ip komputer";  // IPv4 komputer (cek dengan ipconfig)
 const int    serverPort = 8080;
 
 #define SS_1_PIN  5    // Ruang 17
