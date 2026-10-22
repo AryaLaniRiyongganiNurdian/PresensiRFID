@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kita Hadir UNS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        palette: {
+                            navy: '#0F1E3A',       /* Dark Navy */
+                            deepBlue: '#1E2F4F',   /* Deep Blue */
+                            slate: '#A7B6D0',      /* Soft Slate Gray/Blue */
+                            white: '#FFFFFF',      /* Pure White */
+                            bgLight: '#F4F7FA',    /* Very light gray-blue background */
+                            cardBorder: '#D5DEEC'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F4F7FA;
+            color: #0F1E3A;
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #F4F7FA;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #A7B6D0;
+            border-radius: 8px;
+        }
+        .nav-item-active {
+            background-color: #0F1E3A !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(15, 30, 58, 0.2);
+        }
+        /* Collapsed Sidebar Styles */
+        .sidebar-collapsed {
+            width: 5rem !important; /* w-20 */
+        }
+        .sidebar-collapsed .sidebar-text,
+        .sidebar-collapsed .sidebar-header-text,
+        .sidebar-collapsed .sidebar-footer-text {
+            display: none !important;
+        }
+        .sidebar-collapsed .sidebar-top {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .sidebar-collapsed .sidebar-item {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        /* Glassmorphism Styles for Login Modal */
+        body.locked aside, body.locked main { visibility: hidden; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(15, 30, 58, 0.3);
+        }
+    </style>
+</head>
+<body class="locked min-h-screen flex flex-col md:flex-row antialiased selection:bg-palette-navy selection:text-white">
+
+    <!-- SIDEBAR NAV -->
+    <aside id="main-sidebar" class="w-full md:w-64 bg-white border-r border-palette-cardBorder flex flex-col justify-between p-4 md:p-5 shrink-0 transition-all duration-300 shadow-sm relative z-10">
+        <div>
+            <!-- LOGO & TOGGLE BUTTON -->
+            <div class="sidebar-top flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <img src="img/uns-logo.svg" alt="Logo UNS" class="w-10 h-10 object-contain shrink-0">
+                    <span class="sidebar-header-text text-2xl font-extrabold tracking-tight text-palette-navy">Kita Hadir</span>
+                </div>
+                <!-- COLLAPSE TOGGLE BUTTON -->
+                <button onclick="toggleSidebar()" title="Buka/tutup sidebar" class="hidden md:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-palette-deepBlue transition shrink-0">
+                    <i id="toggle-icon" class="fa-solid fa-angles-left"></i>
+                </button>
+            </div>
+
+            <!-- SUB-HEADER -->
+            <div class="sidebar-header-text mb-6 pl-1 border-b border-palette-cardBorder pb-4">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-palette-navy">Informatika UNS</h4>
+                <p class="text-[11px] text-palette-deepBlue/70 font-medium">Sistem Presensi Manual</p>
+            </div>
+
+            <!-- MENU ITEMS -->
+            <nav class="space-y-1.5">
+                <button onclick="switchTab('overview')" id="nav-overview" class="sidebar-item nav-item-active w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-border-all text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Overview</span>
+                </button>
+                <button onclick="switchTab('ruang17')" id="nav-ruang17" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-door-open text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Ruang 17</span>
+                    <span id="badge-ruang17" class="sidebar-text ml-auto bg-palette-slate/30 text-palette-navy text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+                <button onclick="switchTab('lab')" id="nav-lab" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-laptop-code text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Lab Informatika</span>
+                    <span id="badge-lab" class="sidebar-text ml-auto bg-palette-slate/30 text-palette-navy text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+                <button onclick="switchTab('log')" id="nav-log" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-clock-rotate-left text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Log Riwayat</span>
+                </button>
+                <button onclick="switchTab('dosen')" id="nav-dosen" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-user-tie text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Database Dosen</span>
+                </button>
+                <button onclick="switchTab('mahasiswa')" id="nav-mahasiswa" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-users text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Data Mahasiswa</span>
+                </button>
+            </nav>
+        </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar">
+        
+        <!-- HEADER TOP BAR -->
+        <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white p-5 rounded-2xl border border-palette-cardBorder shadow-sm">
+            <div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-palette-navy tracking-tight">Mangesthi Luhur Ambangun Nagara</h1>
+                <p id="current-date-time" class="text-xs text-palette-deepBlue/70 font-semibold mt-1">Kamis, 22 Oktober 2026 • 09:00:00 WIB</p>
+            </div>
+
+            <!-- TOP RIGHT PROFILE / LOGIN BUTTON SECTION -->
+            <div id="user-profile-section" class="flex items-center gap-3">
+                <!-- Logged In View (Hidden by Default) -->
+                <div id="logged-in-box" class="flex items-center gap-3">
+                    <div class="text-right">
+                        <p id="lecturer-name" class="text-xs font-extrabold text-palette-navy">-</p>
+                        <p id="lecturer-nip" class="text-[10px] font-bold text-palette-deepBlue">NIP: -</p>
+                    </div>
+                    <div class="w-10 h-10 bg-palette-navy text-white font-extrabold text-xs rounded-full flex items-center justify-center shadow-sm border-2 border-palette-slate">
+                        DSN
+                    </div>
+                    <button onclick="logoutDosen()" class="text-rose-600 hover:text-rose-800 p-2 rounded-lg hover:bg-rose-50 transition" title="Logout">
+                        <i class="fa-solid fa-power-off text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP METRIC CARDS -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <!-- Card 1: Attendance Rate -->
+            <div class="bg-palette-navy text-white p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-slate">Kunjungan Selesai (Log)</span>
+                    <div id="stat-log" class="text-3xl font-extrabold tracking-tight mt-1 text-white">0</div>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                    <span class="bg-white/10 text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-white/15 flex items-center gap-1">
+                        <i class="fa-solid fa-rotate text-[10px]"></i> Update otomatis tiap 3 detik
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card 2: Active Students -->
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-deepBlue/70">Mahasiswa Presensi Aktif</span>
+                    <div class="text-3xl font-extrabold text-palette-navy tracking-tight mt-1" id="stat-mhs-aktif">0</div>
+                </div>
+                <div class="mt-3 text-xs font-semibold text-palette-deepBlue/70">
+                    dari total <span id="stat-mhs-total" class="font-extrabold text-palette-navy">0</span> mahasiswa terdaftar
+                </div>
+            </div>
+
+            <!-- Card 3: Active Rooms -->
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-deepBlue/70">Status Ruangan Dipantau</span>
+                    <div class="text-3xl font-extrabold text-palette-navy tracking-tight mt-1">2 / 2</div>
+                </div>
+                <div class="mt-3 text-xs font-bold text-palette-navy flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Ruang 17 & Lab Informatika
+                </div>
+            </div>
+        </section>
+
+        <!-- NOTIFICATION BANNER -->
+        <div id="toast-message" class="hidden mb-6 p-4 rounded-xl border text-sm font-semibold flex items-center justify-between transition-all duration-300 shadow-sm">
+            <div class="flex items-center gap-3">
+                <i id="toast-icon" class="fa-solid fa-circle-info text-base"></i>
+                <span id="toast-text">Pesan sistem...</span>
+            </div>
+            <button onclick="hideToast()" class="text-xs opacity-70 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- TAB CONTENT: OVERVIEW -->
+        <section id="tab-overview" class="tab-content space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-palette-navy">Ringkasan Ruangan Hari Ini</h3>
+                <button onclick="switchTab('log')" class="text-xs font-bold text-palette-deepBlue hover:underline flex items-center gap-1">
+                    Lihat semua log <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Ruang 17 Overview Card -->
+                <div class="bg-white border border-palette-cardBorder p-5 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-palette-navy text-white flex items-center justify-center font-bold text-xs">
+                                17
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-palette-navy text-sm">Ruang 17</h4>
+                                <p class="text-[11px] text-palette-deepBlue/70 font-medium">Kapasitas: 30 Mahasiswa</p>
+                            </div>
+                        </div>
+                        <span id="badge-ov-17" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            0 Aktif
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-palette-deepBlue/60 font-semibold border-b border-slate-100">
+                                    <th class="pb-2">NIM & NAMA</th>
+                                    <th class="pb-2">WAKTU MASUK</th>
+                                    <th class="pb-2 text-right">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-ov-17" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Lab Informatika Overview Card -->
+                <div class="bg-white border border-palette-cardBorder p-5 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-palette-deepBlue text-white flex items-center justify-center font-bold text-xs">
+                                LAB
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-palette-navy text-sm">Lab Informatika</h4>
+                                <p class="text-[11px] text-palette-deepBlue/70 font-medium">Kapasitas: 40 Mahasiswa</p>
+                            </div>
+                        </div>
+                        <span id="badge-ov-lab" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            0 Aktif
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-palette-deepBlue/60 font-semibold border-b border-slate-100">
+                                    <th class="pb-2">NIM & NAMA</th>
+                                    <th class="pb-2">WAKTU MASUK</th>
+                                    <th class="pb-2 text-right">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-ov-lab" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: RUANG 17 -->
+        <section id="tab-ruang17" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Presensi Aktif - Ruang 17</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar mahasiswa yang saat ini berada di dalam Ruang 17</p>
+                    </div>
+                    <button onclick="openManualModal('17')" class="self-start md:self-auto bg-palette-navy text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-palette-deepBlue transition flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i> Input Manual
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider">
+                                <th class="pb-3 px-2">NIM</th>
+                                <th class="pb-3 px-2">NAMA MAHASISWA</th>
+                                <th class="pb-3 px-2">KELAS</th>
+                                <th class="pb-3 px-2">WAKTU MASUK</th>
+                                <th class="pb-3 px-2 text-right">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-ruang17" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: LAB INFORMATIKA -->
+        <section id="tab-lab" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Presensi Aktif - Lab Informatika</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar mahasiswa yang saat ini berada di dalam Lab Informatika</p>
+                    </div>
+                    <button onclick="openManualModal('LAB')" class="self-start md:self-auto bg-palette-deepBlue text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-palette-navy transition flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i> Input Manual
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider">
+                                <th class="pb-3 px-2">NIM</th>
+                                <th class="pb-3 px-2">NAMA MAHASISWA</th>
+                                <th class="pb-3 px-2">KELAS</th>
+                                <th class="pb-3 px-2">WAKTU MASUK</th>
+                                <th class="pb-3 px-2 text-right">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-lab" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: LOG RIWAYAT -->
+        <section id="tab-log" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Log Riwayat Kunjungan</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Catatan presensi selesai (Masuk, Keluar, dan Durasi Kunjungan)</p>
+                    </div>
+                    <span class="text-xs font-semibold bg-palette-bgLight text-palette-navy px-3 py-1.5 rounded-xl border border-palette-cardBorder">
+                        Total Log: <strong id="log-count">0</strong>
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider">
+                                <th class="pb-3 px-2">ID LOG</th>
+                                <th class="pb-3 px-2">MAHASISWA</th>
+                                <th class="pb-3 px-2">RUANGAN</th>
+                                <th class="pb-3 px-2">MASUK</th>
+                                <th class="pb-3 px-2">KELUAR</th>
+                                <th class="pb-3 px-2 text-right">DURASI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-log" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: DATABASE DOSEN -->
+        <section id="tab-dosen" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Database Dosen</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar dosen terdaftar (hanya tampil setelah login)</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider">
+                                <th class="pb-3 px-2">NIP</th>
+                                <th class="pb-3 px-2">NAMA DOSEN</th>
+                                <th class="pb-3 px-2">EMAIL LOGIN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-dosen" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: DATA MAHASISWA -->
+        <section id="tab-mahasiswa" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Master Data Mahasiswa</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Mahasiswa yang pernah diinput ke sistem</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider">
+                                <th class="pb-3 px-2">NIM</th>
+                                <th class="pb-3 px-2">NAMA LENGKAP</th>
+                                <th class="pb-3 px-2">KELAS</th>
+                                <th class="pb-3 px-2">KARTU RFID</th>
+                                <th class="pb-3 px-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-mahasiswa" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL LOGIN (WAJIB, TIDAK BISA DITUTUP) -->
+    <div id="modal-login" class="fixed inset-0 flex items-center justify-center p-4 z-50">
+        <div class="absolute inset-0 bg-cover bg-center filter blur-md scale-105"
+             style="background-image: url('img/gedung-uns.webp');">
+        </div>
+        <div class="absolute inset-0 bg-palette-navy/70"></div>
+
+        <div class="glass-card w-full max-w-md rounded-3xl p-8 relative z-10">
+            <div class="text-center mb-6">
+                <img src="img/uns-logo.svg" alt="Logo UNS" class="w-16 h-16 object-contain mx-auto mb-3">
+                <h3 class="text-2xl font-extrabold text-palette-navy tracking-tight">Login</h3>
+                <p class="text-xs text-palette-deepBlue/80 font-medium mt-1">Masuk untuk membuka dashboard presensi</p>
+            </div>
+
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Email / Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-palette-deepBlue/50 text-xs">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input id="login-email" type="text" required autocomplete="username"
+                            class="w-full pl-10 pr-3 py-2.5 bg-white/80 border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30 focus:border-palette-navy transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-palette-deepBlue/50 text-xs">
+                            <i class="fa-solid fa-key"></i>
+                        </span>
+                        <input id="login-password" type="password" required autocomplete="current-password"
+                            class="w-full pl-10 pr-3 py-2.5 bg-white/80 border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30 focus:border-palette-navy transition">
+                    </div>
+                </div>
+
+                <p id="login-error" class="hidden text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></p>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-palette-navy hover:bg-palette-deepBlue text-white py-3 rounded-xl font-bold text-xs transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i> Masuk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL INPUT MANUAL -->
+    <div id="modal-manual" class="fixed inset-0 hidden items-center justify-center p-4 z-40">
+        <div class="absolute inset-0 bg-palette-navy/60" onclick="closeManualModal()"></div>
+        <div class="bg-white w-full max-w-md rounded-3xl p-7 relative z-10 shadow-2xl border border-palette-cardBorder">
+            <button onclick="closeManualModal()" class="absolute top-5 right-5 text-palette-navy/60 hover:text-palette-navy transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-extrabold text-palette-navy">Input Manual Presensi</h3>
+            <p class="text-xs text-palette-deepBlue/70 font-medium mb-5">Waktu masuk dicatat otomatis saat data disimpan.</p>
+
+            <form onsubmit="handleManualSubmit(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Ruangan</label>
+                    <select id="manual-ruangan" class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                        <option value="17">Ruang 17</option>
+                        <option value="LAB">Lab Informatika</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">NIM</label>
+                    <input id="manual-nim" type="text" required maxlength="20" autocomplete="off" oninput="prefillMahasiswa()"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Nama Mahasiswa</label>
+                    <input id="manual-nama" type="text" required maxlength="100" autocomplete="off"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Kelas</label>
+                    <input id="manual-kelas" type="text" required maxlength="50" autocomplete="off"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">UID Kartu RFID (opsional)</label>
+                    <div class="flex gap-2">
+                        <input id="manual-uid" type="text" maxlength="20" autocomplete="off"
+                            class="flex-1 px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-mono font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                        <button type="button" onclick="ambilKartuTerakhir('manual-uid')"
+                            class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[11px] font-bold text-palette-navy">Ambil scan terakhir</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-palette-navy hover:bg-palette-deepBlue text-white py-3 rounded-xl font-bold text-xs transition shadow-lg flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan (Masuk Sekarang)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT STATE LOGIC -->
+    <script>
+        const POLL_MS = 3000;
+
+        let state = { ruangan: [], log: [], mahasiswa: [], dosen: [] };
+        let currentDosen = null;
+        let isSidebarCollapsed = false;
+        let pollTimer = null;
+        let serverDownShown = false;
+
+        function esc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function jam(ts) { return ts ? String(ts).split(' ')[1] || ts : '-'; }
+        function roomData(id) { return state.ruangan.find(r => r.id === id) || { id, nama: id, aktif: [] }; }
+
+        // ===== Sidebar =====
+        function toggleSidebar() {
+            const sidebar = document.getElementById('main-sidebar');
+            const toggleIcon = document.getElementById('toggle-icon');
+            isSidebarCollapsed = !isSidebarCollapsed;
+            if (isSidebarCollapsed) {
+                sidebar.classList.add('sidebar-collapsed');
+                toggleIcon.className = 'fa-solid fa-angles-right';
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                toggleIcon.className = 'fa-solid fa-angles-left';
+            }
+        }
+
+        // ===== Jam =====
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date-time').innerText =
+                `${now.toLocaleDateString('id-ID', options)} • ${now.toLocaleTimeString('id-ID')} WIB`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ===== Tab =====
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(el => el.classList.remove('nav-item-active'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) activeNav.classList.add('nav-item-active');
+        }
+
+        // ===== Kunci / buka dashboard =====
+        function lockApp() {
+            document.body.classList.add('locked');
+            const m = document.getElementById('modal-login');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            closeManualModal();
+            clearInterval(pollTimer);
+            pollTimer = null;
+            state = { ruangan: [], log: [], mahasiswa: [], dosen: [] };
+            renderUI();
+            setTimeout(() => document.getElementById('login-email').focus(), 50);
+        }
+
+        function unlockApp() {
+            document.body.classList.remove('locked');
+            const m = document.getElementById('modal-login');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+            updateUserUI();
+            switchTab('overview');
+            fetchData();
+            if (!pollTimer) pollTimer = setInterval(fetchData, POLL_MS);
+        }
+
+        function updateUserUI() {
+            if (!currentDosen) return;
+            document.getElementById('lecturer-name').innerText = currentDosen.nama;
+            document.getElementById('lecturer-nip').innerText = `NIP: ${currentDosen.nip}`;
+        }
+
+        async function checkSession() {
+            try {
+                const res = await fetch('api/me', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentDosen = data;
+                    unlockApp();
+                    return;
+                }
+            } catch (e) { /* server belum jalan */ }
+            lockApp();
+        }
+
+        // ===== Login / logout =====
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('login-error');
+            errBox.classList.add('hidden');
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            try {
+                const res = await fetch('api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    currentDosen = data;
+                    document.getElementById('login-email').value = '';
+                    document.getElementById('login-password').value = '';
+                    unlockApp();
+                    showToast(`Selamat datang, ${data.nama}!`, 'success');
+                } else {
+                    errBox.innerText = data.message || 'Login gagal.';
+                    errBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                errBox.innerText = 'Tidak bisa menghubungi server. Pastikan Tomcat dan MySQL berjalan.';
+                errBox.classList.remove('hidden');
+            }
+        }
+
+        async function logoutDosen() {
+            try { await fetch('api/logout', { method: 'POST' }); } catch (e) {}
+            currentDosen = null;
+            lockApp();
+        }
+
+        // ===== Toast =====
+        let toastTimer = null;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast-message');
+            const toastText = document.getElementById('toast-text');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastText.innerText = message;
+            toast.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-900', 'border-emerald-200', 'bg-rose-50', 'text-rose-900', 'border-rose-200', 'bg-amber-50', 'text-amber-900', 'border-amber-200');
+
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-50', 'text-emerald-900', 'border-emerald-200');
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-600';
+            } else if (type === 'error') {
+                toast.classList.add('bg-rose-50', 'text-rose-900', 'border-rose-200');
+                toastIcon.className = 'fa-solid fa-circle-xmark text-rose-600';
+            } else {
+                toast.classList.add('bg-amber-50', 'text-amber-900', 'border-amber-200');
+                toastIcon.className = 'fa-solid fa-triangle-exclamation text-amber-600';
+            }
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(hideToast, 4000);
+        }
+        function hideToast() { document.getElementById('toast-message').classList.add('hidden'); }
+
+        // ===== Ambil data =====
+        async function fetchData() {
+            try {
+                const res = await fetch('api/data', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                state = await res.json();
+                serverDownShown = false;
+                renderUI();
+            } catch (err) {
+                if (!serverDownShown) {
+                    showToast('Gagal mengambil data dari server/database. Cek Tomcat dan MySQL.', 'error');
+                    serverDownShown = true;
+                }
+            }
+        }
+
+        // ===== Input manual =====
+        function openManualModal(idRuangan) {
+            document.getElementById('manual-ruangan').value = idRuangan;
+            ['manual-nim', 'manual-nama', 'manual-kelas', 'manual-uid'].forEach(id => document.getElementById(id).value = '');
+            const m = document.getElementById('modal-manual');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            setTimeout(() => document.getElementById('manual-nim').focus(), 50);
+        }
+        function closeManualModal() {
+            const m = document.getElementById('modal-manual');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+        // Jika NIM sudah pernah diinput, nama & kelas terisi otomatis
+        function prefillMahasiswa() {
+            const nim = document.getElementById('manual-nim').value.trim().toLowerCase();
+            const m = state.mahasiswa.find(x => x.nim.toLowerCase() === nim);
+            if (m) {
+                document.getElementById('manual-nama').value = m.nama;
+                document.getElementById('manual-kelas').value = m.kelas;
+            }
+        }
+
+        async function postForm(url, params) {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(params)
+            });
+            if (res.status === 401) { currentDosen = null; lockApp(); return null; }
+            return res.json();
+        }
+
+        async function handleManualSubmit(e) {
+            e.preventDefault();
+            try {
+                const data = await postForm('api/masuk', {
+                    id_ruangan: document.getElementById('manual-ruangan').value,
+                    nim: document.getElementById('manual-nim').value,
+                    nama: document.getElementById('manual-nama').value,
+                    kelas: document.getElementById('manual-kelas').value,
+                    uid: document.getElementById('manual-uid').value
+                });
+                if (!data) return;
+                if (data.status === 'success') {
+                    closeManualModal();
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            fetchData();
+        }
+
+        async function keluarManual(nim) {
+            try {
+                const data = await postForm('api/keluar', { nim });
+                if (!data) return;
+                showToast(data.message, data.status === 'success' ? 'info' : 'error');
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            fetchData();
+        }
+
+        // Tombol "Keluar" memakai data-nim agar aman dari karakter khusus
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-keluar');
+            if (btn) keluarManual(btn.dataset.nim);
+        });
+
+        // ===== Render =====
+        function renderUI() {
+            const r17 = roomData('17').aktif;
+            const rLab = roomData('LAB').aktif;
+
+            document.getElementById('badge-ruang17').innerText = r17.length;
+            document.getElementById('badge-lab').innerText = rLab.length;
+            document.getElementById('badge-ov-17').innerText = `${r17.length} Aktif`;
+            document.getElementById('badge-ov-lab').innerText = `${rLab.length} Aktif`;
+            document.getElementById('stat-mhs-aktif').innerText = r17.length + rLab.length;
+            document.getElementById('stat-mhs-total').innerText = state.mahasiswa.length;
+            document.getElementById('stat-log').innerText = state.log.length;
+
+            renderOverviewTable('list-ov-17', r17);
+            renderOverviewTable('list-ov-lab', rLab);
+            renderActiveRoomTable('table-ruang17', r17);
+            renderActiveRoomTable('table-lab', rLab);
+            renderLogTable();
+            renderMahasiswaTable();
+            renderDosenTable();
+        }
+
+        function renderOverviewTable(elementId, listData) {
+            const tbody = document.getElementById(elementId);
+            if (listData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = listData.map(item => `
+                <tr>
+                    <td class="py-2.5">
+                        <div class="font-bold text-palette-navy">${esc(item.nama)}</div>
+                        <div class="text-[10px] text-palette-deepBlue/70 font-semibold">${esc(item.nim)}</div>
+                    </td>
+                    <td class="py-2.5 text-palette-deepBlue font-bold">${esc(jam(item.masuk))}</td>
+                    <td class="py-2.5 text-right">
+                        <span class="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">Aktif</span>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function renderActiveRoomTable(elementId, listData) {
+            const tbody = document.getElementById(elementId);
+            if (listData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa yang berada di ruangan ini.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = listData.map(item => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(item.nim)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy">${esc(item.nama)}</td>
+                    <td class="py-3.5 px-2 text-palette-deepBlue/70 font-medium">${esc(item.kelas)}</td>
+                    <td class="py-3.5 px-2 font-bold text-palette-deepBlue">${esc(jam(item.masuk))}</td>
+                    <td class="py-3.5 px-2 text-right">
+                        <button data-nim="${esc(item.nim)}" class="btn-keluar bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold px-3 py-1 rounded-lg transition border border-rose-200">Keluar</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function renderLogTable() {
+            const tbody = document.getElementById('table-log');
+            document.getElementById('log-count').innerText = state.log.length;
+            if (state.log.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-palette-deepBlue/60 italic">Belum ada riwayat presensi tercatat.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = state.log.map(l => `
+                <tr>
+                    <td class="py-3.5 px-2 font-mono font-bold text-palette-deepBlue/60">#LOG-${String(l.id).padStart(3, '0')}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy">${esc(l.nama)} <span class="text-palette-deepBlue/60 text-[10px] font-normal">(${esc(l.nim)})</span></td>
+                    <td class="py-3.5 px-2 font-bold text-palette-deepBlue">${esc(l.ruangan)}</td>
+                    <td class="py-3.5 px-2 text-palette-navy">${esc(l.masuk)}</td>
+                    <td class="py-3.5 px-2 text-palette-navy">${esc(l.keluar)}</td>
+                    <td class="py-3.5 px-2 text-right font-mono font-bold text-emerald-700">${esc(l.durasi)}</td>
+                </tr>`).join('');
+        }
+
+        function renderMahasiswaTable() {
+            const tbody = document.getElementById('table-mahasiswa');
+            if (state.mahasiswa.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-palette-deepBlue/60 italic">Belum ada data mahasiswa.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = state.mahasiswa.map(m => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(m.nim)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy">${esc(m.nama)}</td>
+                    <td class="py-3.5 px-2 text-palette-deepBlue/70">${esc(m.kelas)}</td>
+                    <td class="py-3.5 px-2 font-mono text-palette-deepBlue">${m.uid ? esc(m.uid) : '<span class="italic text-palette-deepBlue/50">Belum ada</span>'}</td>
+                    <td class="py-3.5 px-2">
+                        <button data-nim="${esc(m.nim)}" class="btn-tautkan bg-slate-100 hover:bg-slate-200 text-palette-navy text-[11px] font-bold px-3 py-1 rounded-lg transition border border-palette-cardBorder">${m.uid ? 'Ganti kartu' : 'Tautkan kartu'}</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function ambilKartuTerakhir(inputId) {
+            try {
+                const res = await fetch('api/kartu', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                const data = await res.json();
+                if (data.uid) {
+                    document.getElementById(inputId).value = data.uid;
+                } else {
+                    showToast('Belum ada kartu baru yang discan dalam 1 menit terakhir.', 'error');
+                }
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+        }
+
+        async function tautkanKartu(nim) {
+            try {
+                const res = await fetch('api/kartu', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                const cek = await res.json();
+                if (!cek.uid) {
+                    showToast('Tempelkan kartu ke reader dulu, lalu klik Tautkan lagi.', 'error');
+                    return;
+                }
+                const data = await postForm('api/kartu', { nim, uid: cek.uid });
+                if (!data) return;
+                showToast(data.message, data.status === 'success' ? 'success' : 'error');
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            fetchData();
+        }
+
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-tautkan');
+            if (btn) tautkanKartu(btn.dataset.nim);
+        });
+
+        function renderDosenTable() {
+            const tbody = document.getElementById('table-dosen');
+            tbody.innerHTML = (state.dosen || []).map(d => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(d.nip)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy">${esc(d.nama)}</td>
+                    <td class="py-3.5 px-2 font-mono text-palette-deepBlue font-bold">${esc(d.email)}</td>
+                </tr>`).join('');
+        }
+
+        // ===== Mulai =====
+        checkSession();
+    </script>
+</body>
+</html>
