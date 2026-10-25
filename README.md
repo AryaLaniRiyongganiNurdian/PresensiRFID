@@ -1,4 +1,4 @@
-Kode yang tadi dibuat:
+Codes I Made:
 1. Arduino:<br>https://github.com/AryaLaniRiyongganiNurdian/PresensiRFID/blob/main/Arduino/sketch_oct22a.ino
 <br><br>
 2. Database:<br>https://github.com/AryaLaniRiyongganiNurdian/PresensiRFID/blob/main/Database/Query.sql<br><br>
