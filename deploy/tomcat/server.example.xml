@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server address="127.0.0.1" port="8005" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+  <Service name="Catalina">
+    <!-- Ganti address dengan IPv4 LAN PC server. Port ini dipakai langsung oleh ESP32. -->
+    <Connector address="192.168.1.10" port="${kitahadir.reader.port:-8080}"
+               protocol="HTTP/1.1" connectionTimeout="20000" />
+
+    <!-- Origin loopback Quick Tunnel. HTTPS berhenti di Cloudflare. -->
+    <Connector address="127.0.0.1" port="8081" protocol="HTTP/1.1"
+               scheme="https" secure="true" proxyPort="443" connectionTimeout="20000" />
+
+    <Engine name="Catalina" defaultHost="localhost">
+      <!-- Deploy satu WAR agar kedua connector memakai sesi dan state aplikasi yang sama. -->
+      <Host name="localhost" appBase="webapps-kitahadir" xmlBase="conf/kitahadir-contexts"
+            unpackWARs="true" autoDeploy="true" />
+    </Engine>
+  </Service>
+</Server>
