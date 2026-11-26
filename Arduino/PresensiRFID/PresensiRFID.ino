@@ -14,11 +14,11 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 const uint16_t HTTP_TIMEOUT_MS = 5000;
 
 // --- PENGATURAN PIN RFID ---
-#define SS_1_PIN 5   // SDA Sensor 1 (Ruang 17)
-#define RST_1_PIN 27 // RST Sensor 1
+#define SS_1_PIN 4   // SDA Sensor 1 (Ruang 17)
+#define RST_1_PIN 26 // RST Sensor 1
   
-#define SS_2_PIN 4   // SDA Sensor 2 (Lab Komputer)
-#define RST_2_PIN 26 // RST Sensor 2
+#define SS_2_PIN 5   // SDA Sensor 2 (Lab Komputer)
+#define RST_2_PIN 27 // RST Sensor 2
 
 MFRC522 sensor_ruang17(SS_1_PIN, RST_1_PIN);
 MFRC522 sensor_lab(SS_2_PIN, RST_2_PIN);
