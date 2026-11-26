@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<!-- Halaman dosen KitaHadir. Formulir mengirim data ke servlet Java. JavaScript membaca hasilnya untuk memperbarui status ruangan dan riwayat. -->
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kita Hadir UNS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        palette: {
+                            navy: '#0F1E3A',       /* Dark Navy */
+                            deepBlue: '#1E2F4F',   /* Deep Blue */
+                            slate: '#A7B6D0',      /* Soft Slate Gray/Blue */
+                            white: '#FFFFFF',      /* Pure White */
+                            bgLight: '#F4F7FA',    /* Very light gray-blue background */
+                            cardBorder: '#D5DEEC'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Warna latar sebelum dashboard terbuka mengikuti tema browser atau pilihan tema pada elemen akar. */
+        :root {
+            --bg-blank: #F4F7FA;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) { --bg-blank: #0B1426; }
+        }
+        :root[data-theme="dark"] { --bg-blank: #0B1426; }
+
+        /* Layar kosong sebelum wipe: polos, mengikuti tema browser */
+        body {
+            background-color: var(--bg-blank);
+            color: #0F1E3A;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #F4F7FA;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #A7B6D0;
+            border-radius: 8px;
+        }
+        .nav-item-active {
+            background-color: #0F1E3A !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(15, 30, 58, 0.2);
+        }
+
+        /* ===== Dashboard (dibungkus #app-shell) ===== */
+        /* Tetap di-render saat terkunci, hanya disembunyikan dengan opacity agar tidak ada tombol yang bocor */
+        #app-shell {
+            background-color: #F4F7FA;
+            color: #0F1E3A;
+        }
+        #app-shell.is-locked {
+            opacity: 0;
+        }
+
+        /* ===== Tombol panah urutan (naik / turun) pada header tabel ===== */
+        .sort-btn {
+            display: block;
+            padding: 0 .3rem;
+            font-size: .8rem;
+            line-height: .8;
+            color: #A7B6D0;
+            cursor: pointer;
+            transition: color .15s ease;
+        }
+        .sort-btn:hover { color: #1E2F4F; }
+        .sort-btn.sort-aktif { color: #0F1E3A; }
+
+        /* ===== Sidebar minimize / maximize ===== */
+        #main-sidebar { overflow: hidden; }
+        /* Padding tetap: ikon selalu di posisi yang sama, hanya lebar sidebar yang berubah */
+        #main-sidebar .sidebar-item { padding-left: 0.625rem; padding-right: 0.625rem; }
+        .sidebar-collapsed { width: calc(5rem + 1px) !important; }
+
+        /* Teks menu memudar */
+        .sidebar-text {
+            white-space: nowrap;
+            overflow: hidden;
+            max-width: 12rem;
+            opacity: 1;
+            transition: opacity .2s ease .12s, max-width .3s ease;
+        }
+        .sidebar-collapsed .sidebar-text {
+            opacity: 0;
+            max-width: 0;
+            margin-left: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            transition: opacity .12s ease, max-width .3s ease;
+        }
+        /* "Kita Hadir" dan "Informatika UNS Sistem Presensi Manual" */
+        .sidebar-header-text {
+            white-space: nowrap;
+            opacity: 1;
+            transition: opacity .25s ease .15s;
+        }
+        .sidebar-collapsed .sidebar-header-text {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .15s ease;
+        }
+        /* Tombol minimize: fade-out saat sidebar mengecil */
+        #btn-minimize {
+            opacity: 1;
+            transition: opacity .25s ease .2s;
+        }
+        .sidebar-collapsed #btn-minimize {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease;
+        }
+        /* Tombol maximize: fade-in menggantikan area teks */
+        #btn-maximize {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease;
+        }
+        .sidebar-collapsed #btn-maximize {
+            opacity: 1;
+            pointer-events: auto;
+            transition: opacity .3s ease .2s;
+        }
+
+        /* ===== Toast (top-center, lapisan paling atas) ===== */
+        #toast-container {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2147483000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .5rem;
+            width: max-content;
+            max-width: calc(100vw - 2rem);
+            pointer-events: none;
+        }
+        .toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            max-width: min(32rem, calc(100vw - 2rem));
+            padding: .875rem 1rem;
+            border-radius: .75rem;
+            border: 1px solid;
+            font-size: .875rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(15, 30, 58, .18);
+            opacity: 0;
+            transition: opacity .4s ease;
+        }
+        .toast.show { opacity: 1; }
+        .toast-success { background: #ECFDF5; color: #064E3B; border-color: #A7F3D0; }
+        .toast-success i.toast-icon { color: #059669; }
+        .toast-error { background: #FFF1F2; color: #881337; border-color: #FECDD3; }
+        .toast-error i.toast-icon { color: #E11D48; }
+        .toast-info { background: #FFFBEB; color: #78350F; border-color: #FDE68A; }
+        .toast-info i.toast-icon { color: #D97706; }
+        .toast-close { opacity: .6; font-size: .75rem; }
+        .toast-close:hover { opacity: 1; }
+
+        /* ===== Wipe diagonal + kilauan kaca ===== */
+        /* Garis wipe berada di x + y = --wipe * (100vw + 100vh), jadi selalu diagonal 45 derajat */
+        @property --wipe { syntax: '<number>'; inherits: false; initial-value: 0; }
+        @keyframes wipe { from { --wipe: 0; } to { --wipe: 1; } }
+        @keyframes shineFade {
+            0%   { opacity: 0; }
+            10%  { opacity: 1; }
+            70%  { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* Layar login: default tersembunyi */
+        #login-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+        }
+        #login-layer.layer-off { display: none !important; }
+
+        /* Wipe masuk: layar login terbuka diagonal dari pojok kiri atas (initial load dan logout) */
+        #login-layer.wipe-in {
+            animation: wipe 1.1s cubic-bezier(.65, 0, .35, 1) both;
+            clip-path: polygon(
+                0 0,
+                calc(var(--wipe) * (100vw + 100vh)) 0,
+                0 calc(var(--wipe) * (100vw + 100vh))
+            );
+        }
+        #login-layer.wipe-in .login-card {
+            animation: cardIn .7s ease .85s both;
+        }
+
+        /* Wipe keluar: layar login tersapu diagonal, dashboard terbuka di bawahnya (login berhasil) */
+        #login-layer.wipe-out {
+            animation: wipe 1.1s cubic-bezier(.65, 0, .35, 1) both;
+            clip-path: polygon(
+                calc(var(--wipe) * (100vw + 100vh)) 0,
+                300vw 0,
+                300vw 300vh,
+                0 300vh,
+                0 calc(var(--wipe) * (100vw + 100vh))
+            );
+        }
+
+        /* Layar login sudah terbuka penuh */
+        #login-layer.is-open {
+            clip-path: none;
+        }
+
+        /* Kilauan kaca: pita tipis yang berjalan tepat di sepanjang garis wipe */
+        #glass-shine {
+            position: fixed;
+            left: -100vmax;
+            top: -80px;
+            width: 200vmax;
+            height: 160px;
+            z-index: 60;
+            pointer-events: none;
+            opacity: 0;
+            background: linear-gradient(to bottom,
+                transparent 0%,
+                rgba(255, 255, 255, .08) 35%,
+                rgba(255, 255, 255, .5) 47%,
+                rgba(255, 255, 255, .95) 50%,
+                rgba(255, 255, 255, .5) 53%,
+                rgba(255, 255, 255, .08) 65%,
+                transparent 100%);
+        }
+        #glass-shine.shine-run {
+            animation: wipe 1.1s cubic-bezier(.65, 0, .35, 1) both, shineFade 1.1s linear both;
+            transform: translate(
+                calc(var(--wipe) * (100vw + 100vh) / 2),
+                calc(var(--wipe) * (100vw + 100vh) / 2)
+            ) rotate(-45deg);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 40px rgba(15, 30, 58, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-palette-navy selection:text-white">
+
+    <!-- TOAST CONTAINER (top-center, paling atas) -->
+    <div id="toast-container" aria-live="polite"></div>
+
+    <!-- APP SHELL: dashboard tetap di-render, disembunyikan saat terkunci -->
+    <div id="app-shell" class="is-locked flex flex-col md:flex-row min-h-screen w-full" inert>
+
+    <!-- SIDEBAR NAV -->
+    <aside id="main-sidebar" class="w-full md:w-64 bg-white border-r border-palette-cardBorder flex flex-col justify-between p-4 md:p-5 shrink-0 transition-all duration-300 shadow-sm relative z-10">
+        <div>
+            <!-- LOGO & TOGGLE BUTTON -->
+            <div class="sidebar-top relative flex items-center h-10 mb-6">
+                <div class="flex items-center gap-3">
+                    <img src="img/uns-logo.svg" alt="Logo UNS" class="w-10 h-10 object-contain shrink-0" style="min-width:2.5rem;aspect-ratio:1/1;">
+                    <span class="sidebar-header-text text-2xl font-extrabold tracking-tight text-palette-navy">Kita Hadir</span>
+                </div>
+                <!-- TOMBOL MINIMIZE -->
+                <button id="btn-minimize" onclick="toggleSidebar()" title="Perkecil sidebar" class="hidden md:flex absolute right-0 top-1 items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-palette-deepBlue">
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
+            </div>
+
+            <!-- SUB-HEADER (tinggi tetap, agar ikon menu di bawahnya tidak bergeser) -->
+            <div class="relative h-[3.25rem] mb-6 border-b border-palette-cardBorder">
+                <div class="sidebar-header-text absolute left-0 top-0 pl-1">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-palette-navy">Informatika UNS</h4>
+                    <p class="text-[11px] text-palette-deepBlue/70 font-medium">Sistem Presensi Manual</p>
+                </div>
+                <!-- TOMBOL MAXIMIZE: muncul menggantikan area teks -->
+                <button id="btn-maximize" onclick="toggleSidebar()" title="Perbesar sidebar" class="hidden md:flex absolute left-0 top-0 items-center justify-center w-10 h-8 rounded-lg hover:bg-slate-100 text-palette-deepBlue">
+                    <i class="fa-solid fa-angles-right"></i>
+                </button>
+            </div>
+
+            <!-- MENU ITEMS -->
+            <nav class="space-y-1.5">
+                <button onclick="switchTab('overview')" id="nav-overview" class="sidebar-item nav-item-active w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-border-all text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Overview</span>
+                </button>
+                <button onclick="switchTab('ruang17')" id="nav-ruang17" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-door-open text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Ruang 17</span>
+                </button>
+                <button onclick="switchTab('lab')" id="nav-lab" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-laptop-code text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Lab Komputer</span>
+                </button>
+                <button onclick="switchTab('log')" id="nav-log" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-clock-rotate-left text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Log Riwayat</span>
+                </button>
+                <button onclick="switchTab('dosen')" id="nav-dosen" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-user-tie text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Database Dosen</span>
+                </button>
+                <button onclick="switchTab('mahasiswa')" id="nav-mahasiswa" class="sidebar-item w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-xs font-bold transition-all hover:bg-slate-100 text-palette-navy">
+                    <i class="fa-solid fa-users text-base w-5 text-center shrink-0"></i>
+                    <span class="sidebar-text">Data Mahasiswa</span>
+                </button>
+            </nav>
+        </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full overflow-y-auto custom-scrollbar">
+
+        <!-- HEADER TOP BAR -->
+        <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-white p-5 rounded-2xl border border-palette-cardBorder shadow-sm">
+            <div>
+                <h1 class="text-xl md:text-2xl font-extrabold text-palette-navy tracking-tight">Mangesthi Luhur Ambangun Nagara</h1>
+                <p id="current-date-time" class="text-xs text-palette-deepBlue/70 font-semibold mt-1">Kamis, 22 Oktober 2026 • 09:00:00 WIB</p>
+            </div>
+
+            <!-- TOP RIGHT PROFILE / LOGIN BUTTON SECTION -->
+            <div id="user-profile-section" class="flex items-center gap-3">
+                <div id="logged-in-box" class="flex items-center gap-3">
+                    <div class="text-right">
+                        <p id="lecturer-name" class="text-xs font-extrabold text-palette-navy">-</p>
+                        <p id="lecturer-nip" class="text-[10px] font-bold text-palette-deepBlue">NIP: -</p>
+                    </div>
+                    <div class="w-10 h-10 bg-palette-navy text-white font-extrabold text-xs rounded-full flex items-center justify-center shadow-sm border-2 border-palette-slate">
+                        DSN
+                    </div>
+                    <button onclick="logoutDosen()" class="text-rose-600 hover:text-rose-800 p-2 rounded-lg hover:bg-rose-50 transition" title="Logout">
+                        <i class="fa-solid fa-power-off text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP METRIC CARDS -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <!-- Card 1: Attendance Rate -->
+            <div class="bg-palette-navy text-white p-6 rounded-2xl shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-slate">Kunjungan Selesai (Log)</span>
+                    <div id="stat-log" class="text-3xl font-extrabold tracking-tight mt-1 text-white">0</div>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                    <span class="bg-white/10 text-white text-[11px] font-semibold px-2.5 py-0.5 rounded-full border border-white/15 flex items-center gap-1">
+                        <i class="fa-solid fa-rotate text-[10px]"></i> Update otomatis tiap 3 detik
+                    </span>
+                </div>
+            </div>
+
+            <!-- Card 2: Active Students -->
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-deepBlue/70">Mahasiswa Presensi Aktif</span>
+                    <div class="text-3xl font-extrabold text-palette-navy tracking-tight mt-1" id="stat-mhs-aktif">0</div>
+                </div>
+                <div class="mt-3 text-xs font-semibold text-palette-deepBlue/70">
+                    dari total <span id="stat-mhs-total" class="font-extrabold text-palette-navy">0</span> mahasiswa terdaftar
+                </div>
+            </div>
+
+            <!-- Card 3: Active Rooms -->
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm flex flex-col justify-between min-h-[130px]">
+                <div>
+                    <span class="text-xs font-semibold text-palette-deepBlue/70">Status Ruangan Dipantau</span>
+                    <div class="text-3xl font-extrabold text-palette-navy tracking-tight mt-1">2 / 2</div>
+                </div>
+                <div class="mt-3 text-xs font-bold text-palette-navy flex items-center gap-2">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Ruang 17 & Lab Komputer
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: OVERVIEW -->
+        <section id="tab-overview" class="tab-content space-y-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-palette-navy">Ringkasan Ruangan Hari Ini</h3>
+                <button onclick="switchTab('log')" class="text-xs font-bold text-palette-deepBlue hover:underline flex items-center gap-1">
+                    Lihat semua log <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Ruang 17 Overview Card -->
+                <div class="bg-white border border-palette-cardBorder p-5 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-palette-navy text-white flex items-center justify-center font-bold text-xs">
+                                17
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-palette-navy text-sm">Ruang 17</h4>
+                                <p class="text-[11px] text-palette-deepBlue/70 font-medium">Kapasitas: 30 Mahasiswa</p>
+                            </div>
+                        </div>
+                        <span id="badge-ov-17" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            0 Aktif
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-palette-deepBlue/60 font-semibold border-b border-slate-100">
+                                    <th class="pb-2">NIM & NAMA</th>
+                                    <th class="pb-2">WAKTU MASUK</th>
+                                    <th class="pb-2 text-right">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-ov-17" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Lab Komputer Overview Card -->
+                <div class="bg-white border border-palette-cardBorder p-5 rounded-2xl shadow-sm">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-palette-deepBlue text-white flex items-center justify-center font-bold text-xs">
+                                LAB
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-palette-navy text-sm">Lab Komputer</h4>
+                                <p class="text-[11px] text-palette-deepBlue/70 font-medium">Kapasitas: 40 Mahasiswa</p>
+                            </div>
+                        </div>
+                        <span id="badge-ov-lab" class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            0 Aktif
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="text-palette-deepBlue/60 font-semibold border-b border-slate-100">
+                                    <th class="pb-2">NIM & NAMA</th>
+                                    <th class="pb-2">WAKTU MASUK</th>
+                                    <th class="pb-2 text-right">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="list-ov-lab" class="divide-y divide-slate-100">
+                                <tr>
+                                    <td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: RUANG 17 -->
+        <section id="tab-ruang17" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Presensi Aktif - Ruang 17</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar mahasiswa yang saat ini berada di dalam Ruang 17</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="unduhCsv('17')" class="bg-slate-100 hover:bg-slate-200 text-palette-navy text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                            Unduh CSV
+                        </button>
+                        <button onclick="openManualModal('17')" class="bg-palette-navy text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-palette-deepBlue transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-user-plus"></i> Input Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div id="toolbar-ruang17"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr id="head-ruang17" class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider"></tr>
+                        </thead>
+                        <tbody id="table-ruang17" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: LAB KOMPUTER -->
+        <section id="tab-lab" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Presensi Aktif - Lab Komputer</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar mahasiswa yang saat ini berada di dalam Lab Komputer</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="unduhCsv('LAB')" class="bg-slate-100 hover:bg-slate-200 text-palette-navy text-xs font-bold px-4 py-2.5 rounded-xl transition">
+                            Unduh CSV
+                        </button>
+                        <button onclick="openManualModal('LAB')" class="bg-palette-deepBlue text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-palette-navy transition flex items-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-user-plus"></i> Input Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div id="toolbar-lab"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead>
+                            <tr id="head-lab" class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider"></tr>
+                        </thead>
+                        <tbody id="table-lab" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: LOG RIWAYAT -->
+        <section id="tab-log" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Log Riwayat Kunjungan</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Catatan presensi selesai (Masuk, Keluar, dan Durasi Kunjungan)</p>
+                    </div>
+                    <span class="text-xs font-semibold bg-palette-bgLight text-palette-navy px-3 py-1.5 rounded-xl border border-palette-cardBorder">
+                        Total Log: <strong id="log-count">0</strong>
+                    </span>
+                </div>
+
+                <div id="toolbar-log"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="tabel-halaman w-full min-w-[720px] text-left text-xs">
+                        <colgroup><col style="width:12%"><col style="width:30%"><col style="width:14%"><col style="width:16%"><col style="width:16%"><col style="width:12%"></colgroup>
+                        <thead>
+                            <tr id="head-log" class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider"></tr>
+                        </thead>
+                        <tbody id="table-log" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pager-log"></div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: DATABASE DOSEN -->
+        <section id="tab-dosen" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Database Dosen</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Daftar dosen terdaftar (hanya tampil setelah login)</p>
+                    </div>
+                </div>
+
+                <div id="toolbar-dosen"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="tabel-halaman w-full min-w-[720px] text-left text-xs">
+                        <colgroup><col style="width:25%"><col style="width:40%"><col style="width:35%"></colgroup>
+                        <thead>
+                            <tr id="head-dosen" class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider"></tr>
+                        </thead>
+                        <tbody id="table-dosen" class="divide-y divide-slate-100">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pager-dosen"></div>
+            </div>
+        </section>
+
+        <!-- TAB CONTENT: DATA MAHASISWA -->
+        <section id="tab-mahasiswa" class="tab-content hidden space-y-6">
+            <div class="bg-white border border-palette-cardBorder p-6 rounded-2xl shadow-sm">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-palette-navy">Master Data Mahasiswa</h3>
+                        <p class="text-xs text-palette-deepBlue/70 font-medium">Mahasiswa yang pernah diinput ke sistem</p>
+                    </div>
+                    <form id="form-impor" onsubmit="imporCsv(event)" class="flex flex-wrap items-end gap-2">
+                        <label for="berkas-impor" class="text-xs font-bold text-palette-navy">
+                            Berkas CSV
+                            <input id="berkas-impor" name="csv" type="file" accept=".csv,text/csv" required class="block mt-1 max-w-full text-xs font-normal">
+                        </label>
+                        <button id="tombol-impor" type="submit" class="bg-palette-navy text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-palette-deepBlue transition disabled:opacity-50">
+                            Impor CSV
+                        </button>
+                    </form>
+                </div>
+                <div id="hasil-impor" aria-live="polite" class="hidden mb-4 rounded-xl bg-slate-100 p-3 text-xs text-palette-navy">
+                    <p id="pesan-impor" class="font-bold"></p>
+                    <ul id="penolakan-impor" class="mt-1 max-h-44 overflow-auto break-words list-disc pl-5"></ul>
+                </div>
+
+                <div id="toolbar-mahasiswa"></div>
+
+                <div class="overflow-x-auto">
+                    <table class="tabel-halaman w-full min-w-[720px] text-left text-xs">
+                        <colgroup><col style="width:16%"><col style="width:34%"><col style="width:14%"><col style="width:18%"><col style="width:18%"></colgroup>
+                        <thead>
+                            <tr id="head-mahasiswa" class="text-palette-deepBlue/70 border-b border-palette-cardBorder font-bold uppercase tracking-wider"></tr>
+                        </thead>
+                        <tbody id="table-mahasiswa" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="pager-mahasiswa"></div>
+            </div>
+        </section>
+
+    </main>
+
+    </div>
+    <!-- END APP SHELL -->
+
+    <!-- LAYAR LOGIN: wipe masuk saat dibuka atau logout, wipe keluar saat login berhasil -->
+    <div id="login-layer" class="layer-off flex items-center justify-center p-4">
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute inset-0 bg-cover bg-center filter blur-md scale-105"
+                 style="background-image: url('img/gedung-uns.webp');">
+            </div>
+            <div class="absolute inset-0 bg-palette-navy/70"></div>
+        </div>
+
+        <div class="login-card glass-card w-full max-w-md rounded-3xl p-8 relative z-10">
+            <div class="text-center mb-6">
+                <img src="img/uns-logo.svg" alt="Logo UNS" class="w-16 h-16 object-contain mx-auto mb-3">
+                <h3 class="text-2xl font-extrabold text-palette-navy tracking-tight">Login</h3>
+                <p class="text-xs text-palette-deepBlue/80 font-medium mt-1">Masuk untuk membuka dashboard presensi</p>
+            </div>
+
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Email / Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-palette-deepBlue/50 text-xs">
+                            <i class="fa-solid fa-envelope"></i>
+                        </span>
+                        <input id="login-email" type="text" required autocomplete="username"
+                            class="w-full pl-10 pr-3 py-2.5 bg-white/80 border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30 focus:border-palette-navy transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-palette-deepBlue/50 text-xs">
+                            <i class="fa-solid fa-key"></i>
+                        </span>
+                        <input id="login-password" type="password" required autocomplete="current-password"
+                            class="w-full pl-10 pr-3 py-2.5 bg-white/80 border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30 focus:border-palette-navy transition">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-palette-navy hover:bg-palette-deepBlue text-white py-3 rounded-xl font-bold text-xs transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i> Masuk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- KILAUAN KACA (dipakai untuk wipe login) -->
+    <div id="glass-shine"></div>
+
+    <!-- Formulir masuk manual mengambil ID ruangan dari tombol pembuka. handleManualSubmit mengirim identitas mahasiswa dan UID opsional ke PresensiServlet. -->
+    <div id="modal-manual" class="fixed inset-0 hidden items-center justify-center p-4 z-40">
+        <div class="absolute inset-0 bg-palette-navy/60" onclick="closeManualModal()"></div>
+        <div class="bg-white w-full max-w-md rounded-3xl p-7 relative z-10 shadow-2xl border border-palette-cardBorder">
+            <button onclick="closeManualModal()" class="absolute top-5 right-5 text-palette-navy/60 hover:text-palette-navy transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-extrabold text-palette-navy">Input Manual Presensi</h3>
+            <p class="text-xs text-palette-deepBlue/70 font-medium mb-5">Waktu masuk dicatat otomatis saat data disimpan.</p>
+
+            <form onsubmit="handleManualSubmit(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Ruangan</label>
+                    <select id="manual-ruangan" class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                        <option value="17">Ruang 17</option>
+                        <option value="LAB">Lab Komputer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">NIM</label>
+                    <input id="manual-nim" type="text" required maxlength="20" autocomplete="off" oninput="prefillMahasiswa()"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Nama Mahasiswa</label>
+                    <input id="manual-nama" type="text" required maxlength="100" autocomplete="off"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">Kelas</label>
+                    <input id="manual-kelas" type="text" required maxlength="50" autocomplete="off"
+                        class="w-full px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-palette-navy mb-1.5">UID Kartu RFID (opsional)</label>
+                    <div class="flex gap-2">
+                        <input id="manual-uid" type="text" maxlength="20" autocomplete="off"
+                            class="flex-1 px-3 py-2.5 bg-white border border-palette-cardBorder rounded-xl text-xs font-mono font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                        <button type="button" onclick="ambilKartuTerakhir('manual-uid')"
+                            class="px-3 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-[11px] font-bold text-palette-navy">Ambil scan terakhir</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-palette-navy hover:bg-palette-deepBlue text-white py-3 rounded-xl font-bold text-xs transition shadow-lg flex items-center justify-center gap-2 mt-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan (Masuk Sekarang)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript dashboard memeriksa sesi dosen, meminta data ke API, dan mengisi tabel dalam halaman ini. -->
+    <script>
+        const POLL_MS = 3000;
+
+        const UKURAN_HALAMAN = 20;
+        const REFRESH_TABEL_MS = 15000;
+        const WIPE_MS = 1100;   // harus sama dengan durasi animasi wipe di CSS
+        let state = { ruangan: [], total_mahasiswa: 0, total_log: 0, total_dosen: 0 };
+        let pageState = {};
+        let activeTab = 'overview';
+
+        function resetPageState() {
+            ['log', 'mahasiswa', 'dosen'].forEach(j => {
+                pageState[j] = { page: 1, totalPages: 1, total: 0, rows: [], req: 0, loading: false, lastLoad: 0 };
+            });
+        }
+        resetPageState();
+        let currentDosen = null;
+        let isSidebarCollapsed = false;
+        let pollTimer = null;
+        let serverDownShown = false;
+        let isLocked = false;
+        let layerTimer = null;
+
+        const $ = id => document.getElementById(id);
+        const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function esc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        function jam(ts) { return ts ? String(ts).split(' ')[1] || ts : '-'; }
+        function roomData(id) { return state.ruangan.find(r => r.id === id) || { id, nama: id, aktif: [] }; }
+        function barisKosong(jumlah, kolom) {
+            return `<tr class="baris-kosong"><td colspan="${kolom}">&nbsp;</td></tr>`.repeat(Math.max(0, jumlah));
+        }
+
+        // ===== Konfigurasi tabel: kolom urutan (panah naik/turun) dan kolom pencarian =====
+        // Algoritma hasil benchmark: sorting = Merge Sort, searching = Binary Search iteratif (data sudah terurut menurut
+        // kolom yang dicari) atau Sequential Search (data belum terurut). Tidak ada pengurutan sebelum tombol urut ditekan,
+        // jadi sort awal kosong dan data tampil sesuai urutan aslinya.
+        // server: true mengirim pilihan halaman, urutan, dan pencarian ke TabelServlet.
+        // server: false mengolah daftar aktif ruangan di browser dari respons DataServlet.
+        // head : [label, kunci urutan (null = tidak bisa diurutkan), 'kanan' untuk rata kanan]
+        // cari : [kunci kolom, label, 'persis' jika pencarian harus sama persis]
+        const TBL = {
+            log: {
+                server: true,
+                awal: { sort: '', dir: 'asc' },
+                cari: [['nim', 'NIM'], ['nama', 'Nama Mahasiswa'], ['ruangan', 'Ruangan'], ['id', 'ID Log', 'persis']],
+                head: [['ID LOG', 'id'], ['MAHASISWA', 'mahasiswa'], ['RUANGAN', 'ruangan'],
+                       ['MASUK', 'masuk'], ['KELUAR', 'keluar'], ['DURASI', null, 'kanan']]
+            },
+            mahasiswa: {
+                server: true,
+                awal: { sort: '', dir: 'asc' },
+                cari: [['nim', 'NIM'], ['nama', 'Nama'], ['kelas', 'Kelas'], ['kartu', 'Kartu RFID']],
+                head: [['NIM', 'nim'], ['NAMA LENGKAP', 'nama'], ['KELAS', 'kelas'], ['KARTU RFID', 'kartu'], ['', null]]
+            },
+            dosen: {
+                server: true,
+                awal: { sort: '', dir: 'asc' },
+                cari: [['nip', 'NIP'], ['nama', 'Nama'], ['email', 'Email']],
+                head: [['NIP', 'nip'], ['NAMA DOSEN', 'nama'], ['EMAIL LOGIN', 'email']]
+            },
+            ruang17: {
+                server: false,
+                awal: { sort: '', dir: 'asc' },
+                cari: [['nim', 'NIM'], ['nama', 'Nama'], ['kelas', 'Kelas']],
+                head: [['NIM', 'nim'], ['NAMA MAHASISWA', 'nama'], ['KELAS', 'kelas'],
+                       ['WAKTU MASUK', 'masuk'], ['AKSI', null, 'kanan']]
+            },
+            lab: {
+                server: false,
+                awal: { sort: '', dir: 'asc' },
+                cari: [['nim', 'NIM'], ['nama', 'Nama'], ['kelas', 'Kelas']],
+                head: [['NIM', 'nim'], ['NAMA MAHASISWA', 'nama'], ['KELAS', 'kelas'],
+                       ['WAKTU MASUK', 'masuk'], ['AKSI', null, 'kanan']]
+            }
+        };
+        const RUANG_ID = { ruang17: '17', lab: 'LAB' };
+
+        // Kondisi tampilan (urutan dan pencarian) tiap tabel
+        const view = {};
+
+        function renderHead(j) {
+            const tr = $('head-' + j);
+            if (!tr) return;
+            const v = view[j];
+            tr.innerHTML = TBL[j].head.map(([label, kunci, rata]) => {
+                const kanan = rata === 'kanan';
+                if (!kunci) return `<th class="pb-3 px-2 ${kanan ? 'text-right' : ''}">${label}</th>`;
+                const tombol = (dir, ikon, judul) =>
+                    `<button type="button" class="sort-btn ${v.sort === kunci && v.dir === dir ? 'sort-aktif' : ''}" ` +
+                    `data-jenis="${j}" data-sort="${kunci}" data-dir="${dir}" title="${judul}" aria-label="${judul}">` +
+                    `<i class="fa-solid ${ikon}"></i></button>`;
+                return `<th class="pb-3 px-2"><div class="flex items-center gap-1.5 ${kanan ? 'justify-end' : ''}">` +
+                    `<span>${label}</span>` +
+                    `<span class="inline-flex flex-col">${tombol('asc', 'fa-caret-up', 'Urutkan naik')}${tombol('desc', 'fa-caret-down', 'Urutkan turun')}</span>` +
+                    `</div></th>`;
+            }).join('');
+        }
+
+        function placeholderCari(j) {
+            const sel = $('kolom-' + j);
+            const inp = $('cari-' + j);
+            if (!sel || !inp) return;
+            const opt = sel.options[sel.selectedIndex];
+            const label = opt.text.toLowerCase();
+            if (!TBL[j].server) inp.placeholder = `Cari awalan ${label}`;
+            else if (opt.dataset.persis) inp.placeholder = `Cari ${label} (angka persis), lalu tekan Enter`;
+            else inp.placeholder = `Cari awalan ${label}, lalu tekan Enter`;
+        }
+
+        function bangunToolbar(j) {
+            const el = $('toolbar-' + j);
+            if (!el) return;
+            const cfg = TBL[j];
+            const opsi = cfg.cari.map(([v, t, p]) => `<option value="${v}" ${p ? 'data-persis="1"' : ''}>${t}</option>`).join('');
+            const kotak = 'bg-white border border-palette-cardBorder rounded-xl text-xs font-semibold text-palette-navy focus:outline-none focus:ring-2 focus:ring-palette-navy/30';
+            el.innerHTML = `
+                <form onsubmit="jalankanCari('${j}', event)" class="flex flex-col sm:flex-row gap-2 mb-4">
+                    <select id="kolom-${j}" onchange="ubahKolomCari('${j}')" class="px-3 py-2.5 ${kotak}">${opsi}</select>
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-palette-deepBlue/50 text-xs">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input id="cari-${j}" type="text" maxlength="100" autocomplete="off" ${cfg.server ? '' : `oninput="jalankanCari('${j}')"`}
+                            class="w-full pl-10 pr-3 py-2.5 ${kotak}">
+                    </div>
+                    ${cfg.server ? `<button type="submit" class="px-4 py-2.5 bg-palette-navy hover:bg-palette-deepBlue text-white rounded-xl text-xs font-bold transition">Cari</button>` : ''}
+                    <button type="button" onclick="resetCari('${j}')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-palette-navy rounded-xl text-xs font-bold transition">Reset</button>
+                </form>`;
+        }
+
+        function resetView() {
+            Object.keys(TBL).forEach(j => {
+                view[j] = { sort: TBL[j].awal.sort, dir: TBL[j].awal.dir, kolom: TBL[j].cari[0][0], cari: '' };
+                const sel = $('kolom-' + j);
+                const inp = $('cari-' + j);
+                if (sel) sel.value = view[j].kolom;
+                if (inp) inp.value = '';
+                placeholderCari(j);
+                renderHead(j);
+            });
+        }
+
+        // Terapkan perubahan urutan atau pencarian
+        function terapkanView(j) {
+            if (TBL[j].server) {
+                pageState[j].page = 1;
+                muatTabel(j);
+            } else {
+                renderRuangan(j);
+            }
+        }
+
+        function ubahUrutan(j, sort, dir) {
+            view[j].sort = sort;
+            view[j].dir = dir;
+            renderHead(j);
+            terapkanView(j);
+        }
+
+        function jalankanCari(j, e) {
+            if (e) e.preventDefault();
+            view[j].kolom = $('kolom-' + j).value;
+            view[j].cari = $('cari-' + j).value.trim();
+            terapkanView(j);
+        }
+
+        function ubahKolomCari(j) {
+            placeholderCari(j);
+            if ($('cari-' + j).value.trim()) jalankanCari(j);
+            else view[j].kolom = $('kolom-' + j).value;
+        }
+
+        function resetCari(j) {
+            $('kolom-' + j).value = TBL[j].cari[0][0];
+            $('cari-' + j).value = '';
+            view[j].kolom = TBL[j].cari[0][0];
+            view[j].cari = '';
+            placeholderCari(j);
+            terapkanView(j);
+        }
+
+        // Klik tombol panah pada header tabel
+        document.addEventListener('click', e => {
+            const b = e.target.closest('.sort-btn');
+            if (b) ubahUrutan(b.dataset.jenis, b.dataset.sort, b.dataset.dir);
+        });
+
+        function pesanKosong(j, bawaan) {
+            return view[j] && view[j].cari ? 'Tidak ada data yang cocok dengan pencarian.' : bawaan;
+        }
+
+        // ===== Merge Sort (Divide and Conquer, stabil): bagi dua, urutkan tiap bagian, lalu gabung =====
+        function mergeSort(a, cmp) {
+            if (a.length < 2) return a;
+            const tengah = a.length >> 1;
+            const kiri = mergeSort(a.slice(0, tengah), cmp);
+            const kanan = mergeSort(a.slice(tengah), cmp);
+            const hasil = [];
+            let i = 0, j = 0;
+            while (i < kiri.length && j < kanan.length) {
+                hasil.push(cmp(kanan[j], kiri[i]) < 0 ? kanan[j++] : kiri[i++]);
+            }
+            while (i < kiri.length) hasil.push(kiri[i++]);
+            while (j < kanan.length) hasil.push(kanan[j++]);
+            return hasil;
+        }
+
+        // ===== Sequential Search (Brute Force): untuk data yang belum terurut =====
+        function sequentialSearch(a, cocok) {
+            const hasil = [];
+            for (let i = 0; i < a.length; i++) {
+                if (cocok(a[i])) hasil.push(a[i]);
+            }
+            return hasil;
+        }
+
+        // ===== Binary Search iteratif: untuk data yang sudah terurut menurut kolom yang dicari =====
+        // banding(x) negatif jika x sebelum target, 0 jika cocok, positif jika sesudah target
+        function binarySearch(a, banding) {
+            let kiri = 0, kanan = a.length - 1;
+            while (kiri <= kanan) {
+                const tengah = (kiri + kanan) >> 1;
+                const c = banding(a[tengah]);
+                if (c === 0) return tengah;
+                if (c < 0) kiri = tengah + 1;
+                else kanan = tengah - 1;
+            }
+            return -1;
+        }
+
+        // Semua elemen yang cocok (pada array terurut, elemen yang cocok berderet bersebelahan)
+        function binarySearchSemua(a, banding) {
+            const tengah = binarySearch(a, banding);
+            if (tengah < 0) return [];
+            let awal = tengah, akhir = tengah;
+            while (awal > 0 && banding(a[awal - 1]) === 0) awal--;
+            while (akhir < a.length - 1 && banding(a[akhir + 1]) === 0) akhir++;
+            return a.slice(awal, akhir + 1);
+        }
+
+        // Perbandingan teks tanpa membedakan huruf besar dan kecil
+        const kunciTeks = x => String(x ?? '').toLowerCase();
+        const bandingTeks = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+        // Nilai kolom dibandingkan dengan awalan q (q sudah huruf kecil)
+        function bandingAwalan(nilai, q) {
+            const k = kunciTeks(nilai);
+            return bandingTeks(k.length > q.length ? k.slice(0, q.length) : k, q);
+        }
+
+        // ===== Sidebar =====
+        function toggleSidebar() {
+            const sidebar = $('main-sidebar');
+            isSidebarCollapsed = !isSidebarCollapsed;
+            sidebar.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
+        }
+
+        // ===== Jam =====
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            $('current-date-time').innerText =
+                `${now.toLocaleDateString('id-ID', options)} • ${now.toLocaleTimeString('id-ID')} WIB`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // ===== Tab =====
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('nav button').forEach(el => el.classList.remove('nav-item-active'));
+            $(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = $(`nav-${tabId}`);
+            if (activeNav) activeNav.classList.add('nav-item-active');
+            activeTab = tabId;
+            if (pageState[tabId] && currentDosen) muatTabel(tabId);
+        }
+
+        // ===== Animasi layar login + kilauan kaca =====
+        function restartShine() {
+            const shine = $('glass-shine');
+            shine.classList.remove('shine-run');
+            void shine.offsetWidth;
+            shine.classList.add('shine-run');
+        }
+
+        // Tampilkan layar login. animate=true: wipe masuk dari kiri atas, lalu onDone dipanggil.
+        function showLoginLayer(animate, onDone) {
+            const layer = $('login-layer');
+            clearTimeout(layerTimer);
+            layer.classList.remove('layer-off', 'wipe-in', 'wipe-out', 'is-open');
+            if (animate && !reduceMotion()) {
+                void layer.offsetWidth;
+                layer.classList.add('wipe-in');
+                restartShine();
+                layerTimer = setTimeout(() => {
+                    layer.classList.remove('wipe-in');
+                    layer.classList.add('is-open');
+                    if (onDone) onDone();
+                }, WIPE_MS + 50);
+            } else {
+                layer.classList.add('is-open');
+                $('glass-shine').classList.remove('shine-run');
+                if (onDone) onDone();
+            }
+        }
+
+        // Sembunyikan layar login. animate=true: wipe keluar, dashboard terbuka di bawahnya.
+        function hideLoginLayer(animate) {
+            const layer = $('login-layer');
+            clearTimeout(layerTimer);
+            const selesai = () => {
+                layer.classList.remove('wipe-out', 'is-open');
+                layer.classList.add('layer-off');
+            };
+            if (animate && !reduceMotion() && !layer.classList.contains('layer-off')) {
+                layer.classList.remove('is-open', 'wipe-in');
+                void layer.offsetWidth;
+                layer.classList.add('wipe-out');
+                restartShine();
+                layerTimer = setTimeout(selesai, WIPE_MS + 50);
+            } else {
+                selesai();
+                $('glass-shine').classList.remove('shine-run');
+            }
+        }
+
+        // ===== Kunci / buka dashboard =====
+        function lockApp(animate = true) {
+            if (isLocked) return;
+            isLocked = true;
+            clearInterval(pollTimer);
+            pollTimer = null;
+            closeManualModal();
+            $('form-impor').reset();
+            $('hasil-impor').classList.add('hidden');
+            resolveError('aksi');
+            resolveError('server');
+            serverDownShown = false;
+
+            const shell = $('app-shell');
+            // Angka dan tabel baru dikosongkan setelah wipe selesai, sehingga tidak langsung berubah menjadi 0
+            showLoginLayer(animate, () => {
+                state = { ruangan: [], total_mahasiswa: 0, total_log: 0, total_dosen: 0 };
+                resetPageState();
+                resetView();
+                renderUI();
+                ['log', 'mahasiswa', 'dosen'].forEach(renderTabel);
+                shell.classList.add('is-locked');
+                shell.inert = true;
+            });
+            setTimeout(() => $('login-email').focus(), animate ? WIPE_MS : 50);
+        }
+
+        function unlockApp(animate = false) {
+            isLocked = false;
+            const shell = $('app-shell');
+            shell.classList.remove('is-locked');   // dashboard terbuka di bawah layar login
+            shell.inert = false;
+            hideLoginLayer(animate);
+            updateUserUI();
+            switchTab('overview');
+            fetchData();
+            if (!pollTimer) pollTimer = setInterval(fetchData, POLL_MS);
+        }
+
+        function updateUserUI() {
+            if (!currentDosen) return;
+            $('lecturer-name').innerText = currentDosen.nama;
+            $('lecturer-nip').innerText = `NIP: ${currentDosen.nip}`;
+        }
+
+        async function checkSession() {
+            try {
+                const res = await fetch('api/me', { cache: 'no-store' });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    currentDosen = data;
+                    unlockApp(false);
+                    return;
+                }
+            } catch (e) { /* server belum jalan */ }
+            lockApp(true);
+        }
+
+        // ===== Login / logout =====
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            resolveError('login');
+            const email = $('login-email').value.trim();
+            const password = $('login-password').value;
+            try {
+                const res = await fetch('api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    currentDosen = data;
+                    $('login-email').value = '';
+                    $('login-password').value = '';
+                    unlockApp(true);
+                    showToast(`Selamat datang, ${data.nama}!`, 'success');
+                } else {
+                    showToast(data.message || 'Login gagal.', 'error', 'login');
+                }
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server. Pastikan Tomcat dan MySQL berjalan.', 'error', 'login');
+            }
+        }
+
+        async function logoutDosen() {
+            try { await fetch('api/logout', { method: 'POST' }); } catch (e) {}
+            currentDosen = null;
+            lockApp(true);
+        }
+
+        // ===== Toast =====
+        // success / info: fade-in lalu fade-out otomatis setelah 4 detik.
+        // error: fade-in dan bertahan sampai masalahnya selesai (resolveError) atau ditutup manual.
+        const toastEls = {};
+        const TOAST_ICON = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-triangle-exclamation' };
+
+        function dismissToast(el) {
+            if (!el || el.dataset.closing) return;
+            el.dataset.closing = '1';
+            clearTimeout(el._timer);
+            if (el.dataset.key && toastEls[el.dataset.key] === el) delete toastEls[el.dataset.key];
+            el.classList.remove('show');            // fade-out
+            setTimeout(() => el.remove(), 450);
+        }
+        // Dipanggil saat kondisi error sudah teratasi
+        function resolveError(key) { dismissToast(toastEls[key]); }
+
+        function showToast(message, type = 'success', key = null) {
+            const kind = TOAST_ICON[type] ? type : 'info';
+            if (kind === 'error' && !key) key = 'aksi';
+            if (key && toastEls[key]) {             // error yang sama: cukup perbarui teksnya
+                toastEls[key].querySelector('.toast-text').textContent = message;
+                return;
+            }
+            const el = document.createElement('div');
+            el.className = `toast toast-${kind}`;
+            el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+            el.innerHTML = `
+                <div style="display:flex;align-items:center;gap:.75rem;">
+                    <i class="toast-icon fa-solid ${TOAST_ICON[kind]}"></i>
+                    <span class="toast-text"></span>
+                </div>
+                <button type="button" class="toast-close" aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>`;
+            el.querySelector('.toast-text').textContent = message;
+            el.querySelector('.toast-close').onclick = () => dismissToast(el);
+            if (key) { el.dataset.key = key; toastEls[key] = el; }
+            $('toast-container').appendChild(el);
+            void el.offsetWidth;                    // paksa reflow agar fade-in berjalan
+            el.classList.add('show');
+            if (kind !== 'error') el._timer = setTimeout(() => dismissToast(el), 4000);
+        }
+
+        // Selama sesi dosen aktif, unlockApp menjadwalkan fetchData setiap tiga detik.
+        // GET api/data membawa daftar penghuni untuk setiap ruangan. renderUI memakai
+        // data tersebut untuk memperbarui ringkasan dan tabel aktif. Jika tab riwayat
+        // terbuka, muatTabel meminta halaman log lewat api/tabel saat waktunya diperbarui.
+        // Respons 401 mengembalikan pengguna ke layar login.
+        async function fetchData() {
+            try {
+                const res = await fetch('api/data', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(true); return; }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                state = await res.json();
+                if (serverDownShown) { serverDownShown = false; resolveError('server'); }
+                renderUI();
+                if (pageState[activeTab]) muatTabel(activeTab, true);
+            } catch (err) {
+                if (!serverDownShown) {
+                    showToast('Gagal mengambil data dari server/database. Cek Tomcat dan MySQL.', 'error', 'server');
+                    serverDownShown = true;
+                }
+            }
+        }
+
+        // ===== Input manual =====
+        function openManualModal(idRuangan) {
+            $('manual-ruangan').value = idRuangan;
+            ['manual-nim', 'manual-nama', 'manual-kelas', 'manual-uid'].forEach(id => $(id).value = '');
+            const m = $('modal-manual');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            setTimeout(() => $('manual-nim').focus(), 50);
+        }
+        function closeManualModal() {
+            const m = $('modal-manual');
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+        // Jika NIM sudah pernah diinput, nama & kelas terisi otomatis
+        let prefillTimer = null;
+        function prefillMahasiswa() {
+            clearTimeout(prefillTimer);
+            const nim = $('manual-nim').value.trim();
+            if (nim.length < 4) return;
+            prefillTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch('api/tabel?jenis=mahasiswa&nim=' + encodeURIComponent(nim), { cache: 'no-store' });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const m = (data.rows || [])[0];
+                    if (m && $('manual-nim').value.trim() === nim) {
+                        $('manual-nama').value = m.nama;
+                        $('manual-kelas').value = m.kelas;
+                    }
+                } catch (e) { /* abaikan */ }
+            }, 300);
+        }
+
+        async function postForm(url, params) {
+            resolveError('aksi');   // percobaan baru: error aksi sebelumnya dianggap selesai
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(params)
+            });
+            if (res.status === 401) { currentDosen = null; lockApp(true); return null; }
+            return res.json();
+        }
+
+        // Saat dosen menyimpan formulir, postForm mengirim NIM, nama, kelas, ruangan,
+        // dan UID opsional ke POST api/masuk. PresensiServlet memeriksa sesi dan data.
+        // Jika berhasil, modal ditutup. Jika NIM masih aktif, pesan penolakan tampil
+        // dan dosen dapat memperbaiki isian. fetchData membaca kembali keadaan tersimpan.
+        async function handleManualSubmit(e) {
+            e.preventDefault();
+            try {
+                const data = await postForm('api/masuk', {
+                    id_ruangan: $('manual-ruangan').value,
+                    nim: $('manual-nim').value,
+                    nama: $('manual-nama').value,
+                    kelas: $('manual-kelas').value,
+                    uid: $('manual-uid').value
+                });
+                if (!data) return;
+                if (data.status === 'success') {
+                    closeManualModal();
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            fetchData();
+        }
+
+        // Tombol Keluar mengirim NIM dari baris aktif. PresensiServlet menemukan
+        // ruangannya, mencatat riwayat, lalu menghapus baris aktif dalam satu transaksi.
+        async function keluarManual(nim) {
+            try {
+                const data = await postForm('api/keluar', { nim });
+                if (!data) return;
+                showToast(data.message, data.status === 'success' ? 'info' : 'error');
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            fetchData();
+        }
+
+        // Tombol "Keluar" memakai data-nim agar aman dari karakter khusus
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-keluar');
+            if (btn) keluarManual(btn.dataset.nim);
+        });
+
+        // ===== Render =====
+        function renderUI() {
+            const r17 = roomData('17').aktif;
+            const rLab = roomData('LAB').aktif;
+
+            $('badge-ov-17').innerText = `${r17.length} Aktif`;
+            $('badge-ov-lab').innerText = `${rLab.length} Aktif`;
+            $('stat-mhs-aktif').innerText = r17.length + rLab.length;
+            $('stat-mhs-total').innerText = (state.total_mahasiswa || 0).toLocaleString('id-ID');
+            $('stat-log').innerText = (state.total_log || 0).toLocaleString('id-ID');
+
+            renderOverviewTable('list-ov-17', r17);
+            renderOverviewTable('list-ov-lab', rLab);
+            renderRuangan('ruang17');
+            renderRuangan('lab');
+        }
+
+        function renderOverviewTable(elementId, listData) {
+            const tbody = $(elementId);
+            if (listData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-palette-deepBlue/60 italic">Tidak ada mahasiswa di ruangan</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = listData.map(item => `
+                <tr>
+                    <td class="py-2.5">
+                        <div class="font-bold text-palette-navy">${esc(item.nama)}</div>
+                        <div class="text-[10px] text-palette-deepBlue/70 font-semibold">${esc(item.nim)}</div>
+                    </td>
+                    <td class="py-2.5 text-palette-deepBlue font-bold">${esc(jam(item.masuk))}</td>
+                    <td class="py-2.5 text-right">
+                        <span class="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">Aktif</span>
+                    </td>
+                </tr>`).join('');
+        }
+
+        // Tabel ruangan: urutkan dengan Merge Sort hanya jika tombol urut ditekan, lalu cari dengan
+        // Binary Search (jika data terurut menurut kolom yang dicari) atau Sequential Search
+        function renderRuangan(key) {
+            const tbody = $('table-' + key);
+            if (!tbody) return;
+            const v = view[key];
+            let data = roomData(RUANG_ID[key]).aktif.slice();   // urutan asli dari server, tanpa ORDER BY
+
+            const arah = v.dir === 'desc' ? -1 : 1;
+            if (v.sort) {
+                data = mergeSort(data, (a, b) =>
+                    arah * (bandingTeks(kunciTeks(a[v.sort]), kunciTeks(b[v.sort])) ||
+                            bandingTeks(kunciTeks(a.nim), kunciTeks(b.nim))));
+            }
+
+            const q = v.cari.toLowerCase();
+            if (q) {
+                data = v.sort === v.kolom
+                    ? binarySearchSemua(data, d => arah * bandingAwalan(d[v.kolom], q))
+                    : sequentialSearch(data, d => bandingAwalan(d[v.kolom], q) === 0);
+            }
+
+            if (data.length === 0) {
+                const pesan = q ? 'Tidak ada mahasiswa yang cocok dengan pencarian.' : 'Tidak ada mahasiswa yang berada di ruangan ini.';
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-palette-deepBlue/60 italic">${pesan}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(item.nim)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy">${esc(item.nama)}</td>
+                    <td class="py-3.5 px-2 text-palette-deepBlue/70 font-medium">${esc(item.kelas)}</td>
+                    <td class="py-3.5 px-2 font-bold text-palette-deepBlue">${esc(jam(item.masuk))}</td>
+                    <td class="py-3.5 px-2 text-right">
+                        <button data-nim="${esc(item.nim)}" class="btn-keluar bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold px-3 py-1 rounded-lg transition border border-rose-200">Keluar</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        // ===== Tabel dengan halaman (20 data per halaman, diambil dari server) =====
+        function tampilkanMemuat(jenis) {
+            const kolom = { log: 6, mahasiswa: 5, dosen: 3 }[jenis];
+            const tbody = $('table-' + jenis);
+            tbody.innerHTML = `<tr><td colspan="${kolom}" class="text-center text-palette-deepBlue/60 italic">Memuat data...</td></tr>` + barisKosong(UKURAN_HALAMAN - 1, kolom);
+        }
+
+        // otomatis = true: dipanggil polling, dilewati jika masih memuat atau baru saja dimuat
+        async function muatTabel(jenis, otomatis = false) {
+            const p = pageState[jenis];
+            if (otomatis && (p.loading || Date.now() - p.lastLoad < REFRESH_TABEL_MS)) return;
+            const token = ++p.req;
+            const tbody = $('table-' + jenis);
+            p.loading = true;
+            if (!otomatis) {
+                if (p.rows.length === 0) tampilkanMemuat(jenis);
+                else tbody.style.opacity = '0.5';
+            }
+            try {
+                const v = view[jenis];
+                const qs = new URLSearchParams({
+                    jenis, page: p.page, sort: v.sort, dir: v.dir, kolom: v.kolom, cari: v.cari
+                });
+                const res = await fetch('api/tabel?' + qs.toString(), { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(true); return; }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                if (token !== p.req) return;
+                if (serverDownShown) { serverDownShown = false; resolveError('server'); }
+                p.rows = data.rows || [];
+                p.total = data.total || 0;
+                p.totalPages = data.totalPages || 1;
+                p.page = data.page || 1;
+                p.lastLoad = Date.now();
+                renderTabel(jenis);
+            } catch (err) {
+                if (token === p.req) {
+                    if (p.rows.length === 0) {
+                        const kolom = { log: 6, mahasiswa: 5, dosen: 3 }[jenis];
+                        tbody.innerHTML =
+                            `<tr><td colspan="${kolom}" class="py-6 text-center text-rose-700 font-semibold">Gagal memuat data. Cek Tomcat dan MySQL.</td></tr>`;
+                    }
+                    if (!serverDownShown) {
+                        showToast('Gagal mengambil data dari server/database. Cek Tomcat dan MySQL.', 'error', 'server');
+                        serverDownShown = true;
+                    }
+                }
+            } finally {
+                if (token === p.req) {
+                    p.loading = false;
+                    tbody.style.opacity = '';
+                }
+            }
+        }
+
+        function gantiHalaman(jenis, arah) {
+            const p = pageState[jenis];
+            const baru = p.page + arah;
+            if (baru < 1 || baru > p.totalPages) return;
+            p.page = baru;
+            muatTabel(jenis);
+        }
+
+        // Lompat langsung ke nomor halaman yang diketik
+        function lompatHalaman(jenis, e) {
+            e.preventDefault();
+            const p = pageState[jenis];
+            const inp = $('lompat-' + jenis);
+            const n = parseInt(inp.value, 10);
+            if (!Number.isFinite(n)) {
+                showToast('Masukkan nomor halaman berupa angka.', 'info');
+                return;
+            }
+            const tujuan = Math.min(Math.max(n, 1), p.totalPages);
+            if (tujuan !== n) {
+                showToast(`Nomor halaman harus antara 1 dan ${p.totalPages.toLocaleString('id-ID')}.`, 'info');
+            }
+            inp.value = '';
+            if (tujuan === p.page) return;
+            p.page = tujuan;
+            muatTabel(jenis);
+        }
+
+        function renderTabel(jenis) {
+            if (jenis === 'log') renderLogTable();
+            else if (jenis === 'mahasiswa') renderMahasiswaTable();
+            else if (jenis === 'dosen') renderDosenTable();
+            renderPager(jenis);
+        }
+
+        // Kerangka pager dibuat sekali agar kolom lompat halaman tidak terhapus saat data dimuat ulang
+        function bangunPager(jenis) {
+            const el = $('pager-' + jenis);
+            const tombol = 'w-8 h-8 flex items-center justify-center rounded-lg border border-palette-cardBorder bg-white hover:bg-slate-100 text-palette-navy transition disabled:opacity-40 disabled:cursor-not-allowed';
+            el.innerHTML = `
+                <div class="flex flex-col items-center gap-3 mt-4 pt-4 border-t border-palette-cardBorder text-xs">
+                    <div class="flex items-center gap-4">
+                        <button id="pg-prev-${jenis}" onclick="gantiHalaman('${jenis}', -1)" class="${tombol}" title="Halaman sebelumnya"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="pg-hal-${jenis}" class="min-w-[14rem] text-center font-bold text-palette-navy tabular-nums whitespace-nowrap"></span>
+                        <button id="pg-next-${jenis}" onclick="gantiHalaman('${jenis}', 1)" class="${tombol}" title="Halaman berikutnya"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                    <span id="pg-info-${jenis}" class="text-center text-palette-deepBlue/70 font-medium tabular-nums"></span>
+                    <form onsubmit="lompatHalaman('${jenis}', event)" class="flex items-center gap-2">
+                        <label for="lompat-${jenis}" class="text-palette-deepBlue/70 font-medium">Lompat ke halaman</label>
+                        <input id="lompat-${jenis}" type="number" min="1" step="1" inputmode="numeric"
+                            class="w-28 px-3 py-1.5 bg-white border border-palette-cardBorder rounded-lg text-xs font-semibold text-palette-navy tabular-nums focus:outline-none focus:ring-2 focus:ring-palette-navy/30">
+                        <button type="submit" class="px-3 py-1.5 bg-palette-navy hover:bg-palette-deepBlue text-white rounded-lg font-bold transition">Pergi</button>
+                    </form>
+                </div>`;
+            el.dataset.siap = '1';
+        }
+
+        function renderPager(jenis) {
+            const el = $('pager-' + jenis);
+            if (!el) return;
+            if (!el.dataset.siap) bangunPager(jenis);
+            const p = pageState[jenis];
+            const awal = p.total === 0 ? 0 : (p.page - 1) * UKURAN_HALAMAN + 1;
+            const akhir = Math.min(p.page * UKURAN_HALAMAN, p.total);
+            $('pg-hal-' + jenis).textContent = `Halaman ${p.page.toLocaleString('id-ID')} dari ${p.totalPages.toLocaleString('id-ID')}`;
+            $('pg-info-' + jenis).textContent = `Menampilkan ${awal.toLocaleString('id-ID')} sampai ${akhir.toLocaleString('id-ID')} dari ${p.total.toLocaleString('id-ID')} data`;
+            $('pg-prev-' + jenis).disabled = p.page <= 1;
+            $('pg-next-' + jenis).disabled = p.page >= p.totalPages;
+            $('lompat-' + jenis).max = p.totalPages;
+        }
+
+        function renderLogTable() {
+            const tbody = document.getElementById('table-log');
+            const p = pageState.log;
+            document.getElementById('log-count').innerText = p.total.toLocaleString('id-ID');
+            if (p.rows.length === 0) {
+                tbody.innerHTML = pesanKosong('log', 'Belum ada riwayat presensi tercatat.');
+                return;
+            }
+            tbody.innerHTML = p.rows.map(l => `
+                <tr>
+                    <td class="py-3.5 px-2 font-mono font-bold text-palette-deepBlue/60">#LOG-${String(l.id).padStart(3, '0')}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy" title="${esc(l.nama)} (${esc(l.nim)})">${esc(l.nama)} <span class="text-palette-deepBlue/60 text-[10px] font-normal">(${esc(l.nim)})</span></td>
+                    <td class="py-3.5 px-2 font-bold text-palette-deepBlue">${esc(l.ruangan)}</td>
+                    <td class="py-3.5 px-2 text-palette-navy">${esc(l.masuk)}</td>
+                    <td class="py-3.5 px-2 text-palette-navy">${esc(l.keluar)}</td>
+                    <td class="py-3.5 px-2 text-right font-mono font-bold text-emerald-700">${esc(l.durasi)}</td>
+                </tr>`).join('') + barisKosong(UKURAN_HALAMAN - p.rows.length, 6);
+        }
+
+        function renderMahasiswaTable() {
+            const tbody = document.getElementById('table-mahasiswa');
+            const rows = pageState.mahasiswa.rows;
+            if (rows.length === 0) {
+                tbody.innerHTML = pesanKosong('mahasiswa', 'Belum ada data mahasiswa.');
+                return;
+            }
+            tbody.innerHTML = rows.map(m => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(m.nim)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy" title="${esc(m.nama)}">${esc(m.nama)}</td>
+                    <td class="py-3.5 px-2 text-palette-deepBlue/70">${esc(m.kelas)}</td>
+                    <td class="py-3.5 px-2 font-mono text-palette-deepBlue">${m.uid ? esc(m.uid) : '<span class="italic text-palette-deepBlue/50">Belum ada</span>'}</td>
+                    <td class="py-3.5 px-2">
+                        <button data-nim="${esc(m.nim)}" class="btn-tautkan bg-slate-100 hover:bg-slate-200 text-palette-navy text-[11px] font-bold px-3 py-1 rounded-lg transition border border-palette-cardBorder">${m.uid ? 'Ganti kartu' : 'Tautkan kartu'}</button>
+                    </td>
+                </tr>`).join('') + barisKosong(UKURAN_HALAMAN - rows.length, 5);
+        }
+
+        async function imporCsv(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const tombol = $('tombol-impor');
+            const dosen = currentDosen;
+            const hasil = $('hasil-impor');
+            const pesan = $('pesan-impor');
+            const penolakan = $('penolakan-impor');
+            tombol.disabled = true;
+            penolakan.replaceChildren();
+            pesan.textContent = 'Mengimpor CSV…';
+            hasil.classList.remove('hidden');
+            try {
+                const res = await fetch('api/impor', { method: 'POST', body: new FormData(form) });
+                if (currentDosen !== dosen) return;
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                const data = await res.json().catch(() => ({}));
+                if (currentDosen !== dosen) return;
+                pesan.textContent = data.message || 'Impor CSV gagal.';
+                for (const alasan of data.ditolak || []) {
+                    const item = document.createElement('li');
+                    item.textContent = alasan;
+                    penolakan.append(item);
+                }
+                if (res.ok && data.status === 'success') {
+                    form.reset();
+                    await muatTabel('mahasiswa');
+                    if (currentDosen === dosen) fetchData();
+                }
+            } catch (err) {
+                if (currentDosen === dosen) pesan.textContent = 'Tidak bisa menghubungi server.';
+            } finally {
+                tombol.disabled = false;
+            }
+        }
+
+        async function unduhCsv(ruangan) {
+            const dosen = currentDosen;
+            try {
+                const res = await fetch('api/ekspor?ruangan=' + encodeURIComponent(ruangan), { cache: 'no-store' });
+                if (currentDosen !== dosen) return;
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    showToast(data.message || 'Unduhan CSV gagal.', 'error');
+                    return;
+                }
+                const berkas = await res.blob();
+                if (currentDosen !== dosen) return;
+                const url = URL.createObjectURL(berkas);
+                const tautan = document.createElement('a');
+                tautan.href = url;
+                tautan.download = 'data_hadir_' + ruangan + '.csv';
+                document.body.append(tautan);
+                tautan.click();
+                tautan.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (err) {
+                if (currentDosen === dosen) showToast('Unduhan CSV gagal.', 'error');
+            }
+        }
+
+        async function ambilKartuTerakhir(inputId) {
+            resolveError('aksi');
+            try {
+                const res = await fetch('api/kartu', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                const data = await res.json();
+                if (data.uid) {
+                    document.getElementById(inputId).value = data.uid;
+                } else {
+                    showToast('Belum ada kartu baru yang discan dalam 1 menit terakhir.', 'error');
+                }
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+        }
+
+        async function tautkanKartu(nim) {
+            resolveError('aksi');
+            try {
+                const res = await fetch('api/kartu', { cache: 'no-store' });
+                if (res.status === 401) { currentDosen = null; lockApp(); return; }
+                const cek = await res.json();
+                if (!cek.uid) {
+                    showToast('Tempelkan kartu ke reader dulu, lalu klik Tautkan lagi.', 'error');
+                    return;
+                }
+                const data = await postForm('api/kartu', { nim, uid: cek.uid });
+                if (!data) return;
+                showToast(data.message, data.status === 'success' ? 'success' : 'error');
+            } catch (err) {
+                showToast('Tidak bisa menghubungi server.', 'error');
+            }
+            muatTabel('mahasiswa');
+        }
+
+        document.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-tautkan');
+            if (btn) tautkanKartu(btn.dataset.nim);
+        });
+
+        function renderDosenTable() {
+            const tbody = document.getElementById('table-dosen');
+            const rows = pageState.dosen.rows;
+            if (rows.length === 0) {
+                tbody.innerHTML = pesanKosong('dosen', 'Belum ada data dosen.');
+                return;
+            }
+            tbody.innerHTML = rows.map(d => `
+                <tr>
+                    <td class="py-3.5 px-2 font-bold text-palette-navy">${esc(d.nip)}</td>
+                    <td class="py-3.5 px-2 font-semibold text-palette-navy" title="${esc(d.nama)}">${esc(d.nama)}</td>
+                    <td class="py-3.5 px-2 font-mono text-palette-deepBlue font-bold" title="${esc(d.email)}">${esc(d.email)}</td>
+                </tr>`).join('') + barisKosong(UKURAN_HALAMAN - rows.length, 3);
+        }
+
+        // ===== Mulai =====
+        Object.keys(TBL).forEach(bangunToolbar);
+        resetView();
+        checkSession();
+    </script>
+</body>
+</html>
