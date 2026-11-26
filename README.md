@@ -1,7 +1,7 @@
 <p align="center">
-  <img width="360" height="339" alt="pngwing com" src="https://github.com/user-attachments/assets/24209a97-17f0-47f6-bebe-c837003c7202">
+  <img width="360" height="339" alt="pngwing com" src="https://github.com/user-attachments/assets/124c3323-5f17-43e6-b871-f986033feba4">
 </p>
-  
+
 <h1 align="center">KitaHadir</h1>
 
 <p align="center">
